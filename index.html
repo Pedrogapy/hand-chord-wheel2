@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hand Chord Wheel</title>
+    <title>Hand Chord Keys</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -11,9 +11,9 @@
       <header class="topbar">
         <div class="title-block">
           <p class="eyebrow">MediaPipe + Web Audio API</p>
-          <h1>Rodas de acordes controladas pelas mãos</h1>
+          <h1>Teclas de acordes controladas pelas mãos</h1>
           <p class="subtitle">
-            Mão esquerda controla acordes menores. Mão direita controla acordes maiores. As duas rodas podem tocar ao mesmo tempo.
+            Mão esquerda controla a linha de acordes menores no lado esquerdo da câmera. Mão direita controla a linha de acordes maiores no lado direito. As duas podem tocar ao mesmo tempo.
           </p>
         </div>
 
@@ -29,17 +29,17 @@
           <canvas id="overlay"></canvas>
           <div class="stage-badge" id="trackingStatus">Aguardando início</div>
 
-          <div class="hud-panel" aria-label="Estado das rodas">
+          <div class="hud-panel" aria-label="Estado das linhas de teclas">
             <div class="current-chord minor-card">
               <span class="label">Esquerda · menores</span>
               <strong id="leftChord">--</strong>
-              <small id="leftHint">Abra a mão esquerda e aponte para a roda da esquerda.</small>
+              <small id="leftHint">Abra a mão esquerda e aponte para a linha de teclas da esquerda.</small>
             </div>
 
             <div class="current-chord major-card">
               <span class="label">Direita · maiores</span>
               <strong id="rightChord">--</strong>
-              <small id="rightHint">Abra a mão direita e aponte para a roda da direita.</small>
+              <small id="rightHint">Abra a mão direita e aponte para a linha de teclas da direita.</small>
             </div>
           </div>
         </div>
@@ -67,20 +67,20 @@
           <ol>
             <li>Clique em <strong>Iniciar câmera e áudio</strong>.</li>
             <li>Permita o acesso à webcam.</li>
-            <li>Mão direita aberta toca a roda de acordes maiores.</li>
-            <li>Mão esquerda aberta toca a roda de acordes menores.</li>
-            <li>Fechar uma mão em punho silencia apenas a roda daquela mão.</li>
-            <li>Abrir a mão novamente desilencia aquela roda.</li>
+            <li>Mão esquerda aberta toca a linha de teclas menores do lado esquerdo.</li>
+            <li>Mão direita aberta toca a linha de teclas maiores do lado direito.</li>
+            <li>Fechar uma mão em punho silencia apenas a linha daquela mão.</li>
+            <li>Abrir a mão novamente desilencia aquela linha.</li>
           </ol>
         </div>
 
         <div class="chord-bank">
           <div>
-            <h2>Roda esquerda · menores</h2>
+            <h2>Linha esquerda · menores</h2>
             <div class="chord-list" id="minorChordList" aria-label="Lista de acordes menores"></div>
           </div>
           <div>
-            <h2>Roda direita · maiores</h2>
+            <h2>Linha direita · maiores</h2>
             <div class="chord-list" id="majorChordList" aria-label="Lista de acordes maiores"></div>
           </div>
         </div>

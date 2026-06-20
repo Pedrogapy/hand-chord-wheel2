@@ -1,23 +1,23 @@
-# Hand Chord Wheel
+# Hand Chord Keys
 
 Site estático que usa rastreamento de pontos das mãos com MediaPipe e gera sons contínuos de acordes com a Web Audio API.
 
-Agora existem duas rodas ao mesmo tempo:
+Agora existem duas linhas de teclas dentro da câmera:
 
-- **Mão esquerda:** controla a roda de acordes menores.
-- **Mão direita:** controla a roda de acordes maiores.
-- As duas rodas podem tocar simultaneamente.
-- Fechar uma mão em punho silencia apenas a roda daquela mão.
-- Abrir a mão novamente desilencia apenas aquela roda.
+- **Mão esquerda:** controla a linha de teclas no lado esquerdo, com acordes menores.
+- **Mão direita:** controla a linha de teclas no lado direito, com acordes maiores.
+- As duas linhas podem tocar simultaneamente.
+- Fechar uma mão em punho silencia apenas a linha daquela mão.
+- Abrir a mão novamente desilencia apenas aquela linha.
 
 ## Funcionalidades
 
 - Rastreamento de até duas mãos pela webcam.
 - Uso do ponto do indicador para selecionar acordes.
-- Roda esquerda com acordes menores, incluindo `Am`, `Em` e `Fm`.
-- Roda direita com acordes maiores, mantendo a lógica original.
+- Linha esquerda com acordes menores, incluindo `Am`, `Em` e `Fm`.
+- Linha direita com acordes maiores, mantendo a lógica original.
 - Som contínuo sintetizado no navegador, sem arquivos `.mp3`.
-- Duas fontes sonoras independentes, uma para cada roda.
+- Duas fontes sonoras independentes, uma para cada linha de teclas.
 - Controle de volume geral.
 - Controle de suavização para reduzir tremedeira na seleção.
 - Opção para inverter esquerda/direita caso a câmera reconheça as mãos ao contrário.
@@ -59,7 +59,7 @@ Substitua os arquivos do repositório por esta versão e rode:
 
 ```bash
 git add .
-git commit -m "Adicionar duas rodas de acordes por mão"
+git commit -m "Trocar rodas por linhas de teclas"
 git push
 ```
 
@@ -90,7 +90,7 @@ Edite o arquivo:
 js/chords.js
 ```
 
-A roda da direita usa:
+A linha da direita usa:
 
 ```js
 export const MAJOR_CHORDS = [
@@ -99,7 +99,7 @@ export const MAJOR_CHORDS = [
 ];
 ```
 
-A roda da esquerda usa:
+A linha da esquerda usa:
 
 ```js
 export const MINOR_CHORDS = [

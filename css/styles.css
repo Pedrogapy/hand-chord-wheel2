@@ -135,7 +135,7 @@ h1 {
   position: relative;
   overflow: hidden;
   width: 100%;
-  height: clamp(560px, calc(100vh - 170px), 860px);
+  height: clamp(620px, calc(100vh - 150px), 920px);
   border-radius: 22px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent),

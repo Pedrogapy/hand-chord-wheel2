@@ -1,7 +1,7 @@
 {
-  "name": "hand-chord-wheel",
+  "name": "hand-chord-keys",
   "version": "1.0.0",
-  "description": "Site estático com MediaPipe HandLandmarker e Web Audio API para trocar acordes usando rastreamento da mão.",
+  "description": "Controle duas linhas de teclas de acordes com rastreamento das mãos.",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
