@@ -404,11 +404,11 @@ function oppositeHand(controllerId) {
 function scoreHandForController(landmarks, controller) {
   const pointer = getMirroredPoint(landmarks[8]);
   const geometry = getKeyLineGeometry(controller);
-  const centerX = geometry.x + geometry.width / 2;
-  const clampedY = clamp(pointer.y, geometry.y, geometry.y + geometry.height);
-  const horizontalDistance = Math.abs(pointer.x - centerX);
-  const verticalDistance = Math.abs(pointer.y - clampedY);
-  return horizontalDistance + verticalDistance * 0.35;
+  const centerY = geometry.y + geometry.height / 2;
+  const clampedX = clamp(pointer.x, geometry.x, geometry.x + geometry.width);
+  const horizontalDistance = Math.abs(pointer.x - clampedX);
+  const verticalDistance = Math.abs(pointer.y - centerY);
+  return horizontalDistance * 0.35 + verticalDistance;
 }
 
 function updateControllerFromHand(controller, landmarks) {
@@ -455,26 +455,41 @@ function getKeyLineGeometry(controller) {
   const { width, height } = getCanvasSize();
   const isNarrow = width < 760;
   const chordCount = controller.chords.length;
-  const marginX = isNarrow ? width * 0.035 : Math.max(20, width * 0.024);
-  const top = isNarrow ? Math.max(74, height * 0.14) : Math.max(86, height * 0.12);
-  const bottom = isNarrow ? Math.max(26, height * 0.05) : Math.max(38, height * 0.06);
-  const availableHeight = Math.max(260, height - top - bottom);
-  const keyWidth = isNarrow
-    ? Math.min(126, width * 0.26)
-    : Math.min(194, Math.max(142, width * 0.112));
-  const gap = Math.max(4, Math.min(9, availableHeight * 0.008));
-  const segmentHeight = availableHeight / chordCount;
-  const keyHeight = Math.max(18, segmentHeight - gap);
-  const hitPadding = isNarrow ? 28 : 42;
+  const marginX = isNarrow ? width * 0.035 : Math.max(22, width * 0.028);
+  const centerGap = isNarrow ? Math.max(14, width * 0.04) : Math.max(34, width * 0.035);
+  const bottom = isNarrow ? Math.max(34, height * 0.07) : Math.max(44, height * 0.07);
+  const rowHeight = isNarrow ? Math.max(46, height * 0.075) : Math.max(58, Math.min(82, height * 0.085));
+  const availableWidth = isNarrow
+    ? Math.max(280, width - marginX * 2)
+    : Math.max(260, (width - marginX * 2 - centerGap) / 2);
+  const gap = Math.max(4, Math.min(8, availableWidth * 0.006));
+  const segmentWidth = availableWidth / chordCount;
+  const keyWidth = Math.max(18, segmentWidth - gap);
+  const hitPadding = isNarrow ? 32 : 46;
+
+  let x;
+  let y;
+
+  if (isNarrow) {
+    x = marginX;
+    y = controller.id === "left"
+      ? height - bottom - rowHeight * 2 - 18
+      : height - bottom - rowHeight;
+  } else {
+    x = controller.id === "left"
+      ? marginX
+      : width - marginX - availableWidth;
+    y = height - bottom - rowHeight;
+  }
 
   return {
-    x: controller.id === "left" ? marginX : width - marginX - keyWidth,
-    y: top,
-    width: keyWidth,
-    height: availableHeight,
+    x,
+    y,
+    width: availableWidth,
+    height: rowHeight,
     gap,
-    segmentHeight,
-    keyHeight,
+    segmentWidth,
+    keyWidth,
     hitPadding
   };
 }
@@ -486,7 +501,7 @@ function clearScene() {
 
 function drawChordKeys(controller) {
   const geometry = getKeyLineGeometry(controller);
-  const { x, y, width, height, gap, segmentHeight, keyHeight } = geometry;
+  const { x, y, width, height, gap, segmentWidth, keyWidth } = geometry;
   const label = controller.id === "left" ? "MENORES" : "MAIORES";
 
   ctx.save();
@@ -505,11 +520,11 @@ function drawChordKeys(controller) {
   ctx.fillText(label, x + width / 2, y - 20);
 
   for (let index = 0; index < controller.chords.length; index += 1) {
-    const keyY = y + index * segmentHeight + gap / 2;
+    const keyX = x + index * segmentWidth + gap / 2;
     const isActive = index === controller.selectedChordIndex;
 
     ctx.beginPath();
-    roundRect(ctx, x, keyY, width, keyHeight, 15);
+    roundRect(ctx, keyX, y, keyWidth, height, 14);
     ctx.fillStyle = isActive && !controller.gestureMuted ? controller.accent : "rgba(255, 255, 255, 0.105)";
     ctx.strokeStyle = isActive && !controller.gestureMuted ? controller.accentStrong : "rgba(255, 255, 255, 0.18)";
     ctx.lineWidth = isActive && !controller.gestureMuted ? 3 : 1.5;
@@ -518,13 +533,13 @@ function drawChordKeys(controller) {
 
     if (isActive && !controller.gestureMuted) {
       ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
-      roundRect(ctx, x + 8, keyY + 7, width - 16, Math.max(4, keyHeight * 0.16), 999);
+      roundRect(ctx, keyX + 6, y + 7, Math.max(4, keyWidth - 12), Math.max(4, height * 0.16), 999);
       ctx.fill();
     }
 
     ctx.fillStyle = isActive && !controller.gestureMuted ? controller.textOnAccent : "rgba(244, 247, 251, 0.92)";
-    ctx.font = `900 ${Math.max(15, Math.min(26, keyHeight * 0.44))}px Inter, system-ui, sans-serif`;
-    ctx.fillText(controller.chords[index].label, x + width / 2, keyY + keyHeight / 2);
+    ctx.font = `900 ${Math.max(10, Math.min(22, keyWidth * 0.34, height * 0.42))}px Inter, system-ui, sans-serif`;
+    ctx.fillText(controller.chords[index].label, keyX + keyWidth / 2, y + height / 2);
   }
 
   if (controller.gestureMuted) {
@@ -647,20 +662,20 @@ function distance3d(a, b) {
 
 function updateChordFromPointer(controller, pointer) {
   const geometry = getKeyLineGeometry(controller);
-  const hitLeft = geometry.x - geometry.hitPadding;
-  const hitRight = geometry.x + geometry.width + geometry.hitPadding;
-  const hitTop = geometry.y;
-  const hitBottom = geometry.y + geometry.height;
+  const hitLeft = geometry.x;
+  const hitRight = geometry.x + geometry.width;
+  const hitTop = geometry.y - geometry.hitPadding;
+  const hitBottom = geometry.y + geometry.height + geometry.hitPadding;
 
   if (pointer.x < hitLeft || pointer.x > hitRight || pointer.y < hitTop || pointer.y > hitBottom) {
     const side = controller.id === "left" ? "esquerda" : "direita";
-    controller.hintDisplay.textContent = `Mova o indicador da ${controller.handLabel.toLowerCase()} para a linha de teclas da ${side}.`;
+    controller.hintDisplay.textContent = `Mova o indicador da ${controller.handLabel.toLowerCase()} para a linha horizontal da ${side}.`;
     return;
   }
 
-  const relativeY = clamp(pointer.y - geometry.y, 0, geometry.height - 1);
+  const relativeX = clamp(pointer.x - geometry.x, 0, geometry.width - 1);
   const index = clamp(
-    Math.floor(relativeY / geometry.segmentHeight),
+    Math.floor(relativeX / geometry.segmentWidth),
     0,
     controller.chords.length - 1
   );

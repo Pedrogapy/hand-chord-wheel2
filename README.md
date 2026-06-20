@@ -2,10 +2,10 @@
 
 Site estático que usa rastreamento de pontos das mãos com MediaPipe e gera sons contínuos de acordes com a Web Audio API.
 
-Agora existem duas linhas de teclas dentro da câmera:
+Agora existem duas linhas horizontais de teclas dentro da câmera:
 
-- **Mão esquerda:** controla a linha de teclas no lado esquerdo, com acordes menores.
-- **Mão direita:** controla a linha de teclas no lado direito, com acordes maiores.
+- **Mão esquerda:** controla a linha horizontal no lado esquerdo, com acordes menores.
+- **Mão direita:** controla a linha horizontal no lado direito, com acordes maiores.
 - As duas linhas podem tocar simultaneamente.
 - Fechar uma mão em punho silencia apenas a linha daquela mão.
 - Abrir a mão novamente desilencia apenas aquela linha.
@@ -17,7 +17,7 @@ Agora existem duas linhas de teclas dentro da câmera:
 - Linha esquerda com acordes menores, incluindo `Am`, `Em` e `Fm`.
 - Linha direita com acordes maiores, mantendo a lógica original.
 - Som contínuo sintetizado no navegador, sem arquivos `.mp3`.
-- Duas fontes sonoras independentes, uma para cada linha de teclas.
+- Duas fontes sonoras independentes, uma para cada linha horizontal de teclas.
 - Controle de volume geral.
 - Controle de suavização para reduzir tremedeira na seleção.
 - Opção para inverter esquerda/direita caso a câmera reconheça as mãos ao contrário.
@@ -59,7 +59,7 @@ Substitua os arquivos do repositório por esta versão e rode:
 
 ```bash
 git add .
-git commit -m "Trocar rodas por linhas de teclas"
+git commit -m "Trocar colunas por linhas horizontais de teclas"
 git push
 ```
 
