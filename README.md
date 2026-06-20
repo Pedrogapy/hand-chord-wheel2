@@ -148,3 +148,8 @@ hand-chord-wheel/
 ## Ajuste recente
 
 As linhas horizontais foram aumentadas e a área de controle de cada mão ficou muito maior. Agora você não precisa acertar exatamente em cima da linha para trocar o acorde: basta apontar dentro da metade correspondente da tela.
+
+
+## Versão com rodas mais precisas
+
+Esta versão voltou ao formato de duas rodas. A detecção da mão aberta e fechada foi refinada com uma classificação mais estável da pose da mão. A troca de acorde agora usa uma roda com zona neutra no centro, então apontar para o meio da roda não troca a nota.

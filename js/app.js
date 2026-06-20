@@ -77,7 +77,6 @@ class ChordSynth {
     if (!this.audioContext || !this.voices.length) return;
 
     const now = this.audioContext.currentTime;
-
     frequencies.forEach((frequency, index) => {
       const voice = this.voices[index];
       if (!voice) return;
@@ -105,16 +104,13 @@ class ChordSynth {
 
   updateOutputGain() {
     if (!this.audioContext || !this.outputGain) return;
-
     const shouldMute = this.manualMuted || this.gestureMuted;
     const targetVolume = shouldMute ? 0 : this.currentVolume * 0.72;
     const now = this.audioContext.currentTime;
-
     this.outputGain.gain.cancelScheduledValues(now);
     this.outputGain.gain.setTargetAtTime(targetVolume, now, 0.035);
   }
 }
-
 
 const video = document.querySelector("#webcam");
 const canvas = document.querySelector("#overlay");
@@ -133,46 +129,48 @@ const controllers = {
   left: {
     id: "left",
     handLabel: "Mão esquerda",
-    lineLabel: "menores",
+    chordGroupLabel: "menores",
     chords: MINOR_CHORDS,
     selectedChordIndex: -1,
     smoothedPointer: null,
     gestureMuted: false,
-    fistFrames: 0,
+    closedFrames: 0,
     openFrames: 0,
+    poseState: "unknown",
     seenThisFrame: false,
     lastPointer: null,
     synth: new ChordSynth("left"),
     chordDisplay: document.querySelector("#leftChord"),
     hintDisplay: document.querySelector("#leftHint"),
     listElement: minorChordList,
-    activeClass: "minor-active",
-    accent: "rgba(221, 164, 255, 0.64)",
-    accentStrong: "rgba(238, 215, 255, 0.96)",
+    accent: "rgba(221, 164, 255, 0.70)",
+    accentStrong: "rgba(238, 215, 255, 0.98)",
     skeleton: "rgba(221, 164, 255, 0.84)",
-    textOnAccent: "#16081f"
+    textOnAccent: "#16081f",
+    wheelTitle: "MENORES"
   },
   right: {
     id: "right",
     handLabel: "Mão direita",
-    lineLabel: "maiores",
+    chordGroupLabel: "maiores",
     chords: MAJOR_CHORDS,
     selectedChordIndex: -1,
     smoothedPointer: null,
     gestureMuted: false,
-    fistFrames: 0,
+    closedFrames: 0,
     openFrames: 0,
+    poseState: "unknown",
     seenThisFrame: false,
     lastPointer: null,
     synth: new ChordSynth("right"),
     chordDisplay: document.querySelector("#rightChord"),
     hintDisplay: document.querySelector("#rightHint"),
     listElement: majorChordList,
-    activeClass: "major-active",
-    accent: "rgba(143, 211, 255, 0.64)",
-    accentStrong: "rgba(213, 241, 255, 0.96)",
+    accent: "rgba(143, 211, 255, 0.70)",
+    accentStrong: "rgba(213, 241, 255, 0.98)",
     skeleton: "rgba(163, 255, 207, 0.82)",
-    textOnAccent: "#07111f"
+    textOnAccent: "#07111f",
+    wheelTitle: "MAIORES"
   }
 };
 
@@ -191,24 +189,17 @@ window.addEventListener("resize", resizeCanvas);
 startButton.addEventListener("click", startApp);
 muteButton.addEventListener("click", toggleMute);
 volumeControl.addEventListener("input", () => {
-  for (const controller of Object.values(controllers)) {
-    controller.synth.setVolume(Number(volumeControl.value));
-  }
+  for (const controller of Object.values(controllers)) controller.synth.setVolume(Number(volumeControl.value));
 });
 smoothControl.addEventListener("input", () => {
-  for (const controller of Object.values(controllers)) {
-    controller.smoothedPointer = null;
-  }
+  for (const controller of Object.values(controllers)) controller.smoothedPointer = null;
 });
 swapHandsControl.addEventListener("change", () => {
-  for (const controller of Object.values(controllers)) {
-    controller.smoothedPointer = null;
-  }
+  for (const controller of Object.values(controllers)) controller.smoothedPointer = null;
 });
 
 async function startApp() {
   if (isRunning) return;
-
   setStatus("Carregando áudio e rastreamento...", "");
   startButton.disabled = true;
 
@@ -216,13 +207,11 @@ async function startApp() {
     await setupAudio();
     await setupCamera();
     await setupHandLandmarker();
-
     selectChord(controllers.left, 0);
     selectChord(controllers.right, 0);
-
     isRunning = true;
     muteButton.disabled = false;
-    startButton.textContent = "Linhando";
+    startButton.textContent = "Rodando";
     setStatus("Rastreamento ativo", "ok");
     predictWebcam();
   } catch (error) {
@@ -235,51 +224,26 @@ async function startApp() {
 
 async function setupAudio() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-
-  if (!AudioContextClass) {
-    throw new Error("Este navegador não tem suporte à Web Audio API.");
-  }
-
-  if (!audioContext) {
-    audioContext = new AudioContextClass();
-  }
-
+  if (!AudioContextClass) throw new Error("Este navegador não tem suporte à Web Audio API.");
+  if (!audioContext) audioContext = new AudioContextClass();
   await audioContext.resume();
-
-  for (const controller of Object.values(controllers)) {
-    controller.synth.init(audioContext, Number(volumeControl.value));
-  }
+  for (const controller of Object.values(controllers)) controller.synth.init(audioContext, Number(volumeControl.value));
 }
 
 async function setupCamera() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error("Este navegador não liberou acesso à câmera.");
-  }
-
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error("Este navegador não liberou acesso à câmera.");
   const stream = await navigator.mediaDevices.getUserMedia({
-    video: {
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
-      facingMode: "user"
-    },
+    video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: "user" },
     audio: false
   });
-
   video.srcObject = stream;
-
-  await new Promise((resolve) => {
-    video.onloadedmetadata = () => resolve();
-  });
-
+  await new Promise((resolve) => { video.onloadedmetadata = () => resolve(); });
   await video.play();
   resizeCanvas();
 }
 
 async function setupHandLandmarker() {
-  const vision = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm"
-  );
-
+  const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm");
   try {
     handLandmarker = await HandLandmarker.createFromOptions(vision, {
       baseOptions: {
@@ -320,65 +284,45 @@ function predictWebcam() {
 
   if (lastResults?.landmarks?.length) {
     const assignments = assignHands(lastResults);
-
-    for (const assignment of assignments) {
-      updateControllerFromHand(assignment.controller, assignment.landmarks);
-    }
-
-    drawChordKeys(controllers.left);
-    drawChordKeys(controllers.right);
-
+    for (const assignment of assignments) updateControllerFromHand(assignment.controller, assignment.landmarks);
+    drawChordWheel(controllers.left);
+    drawChordWheel(controllers.right);
     for (const assignment of assignments) {
       drawHand(assignment.landmarks, assignment.controller);
       drawPointer(assignment.controller.smoothedPointer, assignment.controller);
     }
-
     updateStatusFromControllers();
   } else {
-    drawChordKeys(controllers.left);
-    drawChordKeys(controllers.right);
+    drawChordWheel(controllers.left);
+    drawChordWheel(controllers.right);
     setStatus("Mostre as mãos para a câmera", "");
   }
 
   animationFrameId = requestAnimationFrame(predictWebcam);
 }
 
-function resetFrameState() {
-  for (const controller of Object.values(controllers)) {
-    controller.seenThisFrame = false;
-  }
-}
+function resetFrameState() { for (const controller of Object.values(controllers)) controller.seenThisFrame = false; }
 
 function assignHands(results) {
   const candidates = results.landmarks.map((landmarks, index) => {
     const detectedLabel = getHandednessLabel(results, index);
     const controllerId = normalizeHandLabel(detectedLabel, landmarks);
     const finalControllerId = swapHandsControl.checked ? oppositeHand(controllerId) : controllerId;
-    return {
-      landmarks,
-      controller: controllers[finalControllerId],
-      score: scoreHandForController(landmarks, controllers[finalControllerId])
-    };
+    return { landmarks, controller: controllers[finalControllerId], score: scoreHandForController(landmarks, controllers[finalControllerId]) };
   });
 
   const assignments = [];
   const usedControllers = new Set();
-
-  candidates
-    .sort((a, b) => a.score - b.score)
-    .forEach((candidate) => {
-      let controller = candidate.controller;
-
-      if (usedControllers.has(controller.id)) {
-        const fallback = controllers[oppositeHand(controller.id)];
-        if (!fallback || usedControllers.has(fallback.id)) return;
-        controller = fallback;
-      }
-
-      assignments.push({ ...candidate, controller });
-      usedControllers.add(controller.id);
-    });
-
+  candidates.sort((a, b) => a.score - b.score).forEach((candidate) => {
+    let controller = candidate.controller;
+    if (usedControllers.has(controller.id)) {
+      const fallback = controllers[oppositeHand(controller.id)];
+      if (!fallback || usedControllers.has(fallback.id)) return;
+      controller = fallback;
+    }
+    assignments.push({ ...candidate, controller });
+    usedControllers.add(controller.id);
+  });
   return assignments;
 }
 
@@ -388,44 +332,36 @@ function getHandednessLabel(results, index) {
 
 function normalizeHandLabel(label, landmarks) {
   const normalized = String(label).toLowerCase();
-
   if (normalized.includes("left")) return "left";
   if (normalized.includes("right")) return "right";
-
   const pointer = getMirroredPoint(landmarks[8]);
   const { width } = getCanvasSize();
   return pointer.x < width / 2 ? "left" : "right";
 }
 
-function oppositeHand(controllerId) {
-  return controllerId === "left" ? "right" : "left";
-}
+function oppositeHand(controllerId) { return controllerId === "left" ? "right" : "left"; }
 
 function scoreHandForController(landmarks, controller) {
   const pointer = getMirroredPoint(landmarks[8]);
-  const geometry = getKeyLineGeometry(controller);
-  const centerY = geometry.y + geometry.height / 2;
-  const clampedX = clamp(pointer.x, geometry.x, geometry.x + geometry.width);
-  const horizontalDistance = Math.abs(pointer.x - clampedX);
-  const verticalDistance = Math.abs(pointer.y - centerY);
-  return horizontalDistance * 0.35 + verticalDistance;
+  const geometry = getWheelGeometry(controller);
+  const dx = pointer.x - geometry.cx;
+  const dy = pointer.y - geometry.cy;
+  const radialDistance = Math.abs(Math.hypot(dx, dy) - geometry.selectionRadius);
+  const sidePenalty = controller.id === "left" ? Math.max(0, pointer.x - geometry.cx) : Math.max(0, geometry.cx - pointer.x);
+  return radialDistance * 0.6 + sidePenalty * 0.4;
 }
 
 function updateControllerFromHand(controller, landmarks) {
   const pointer = getMirroredPoint(landmarks[8]);
   const smoothAmount = Number(smoothControl.value);
-
   controller.seenThisFrame = true;
   controller.lastPointer = pointer;
   controller.smoothedPointer = smoothPoint(controller.smoothedPointer, pointer, smoothAmount);
-
   updateGestureMute(controller, landmarks);
-
   if (controller.gestureMuted) {
-    controller.hintDisplay.textContent = "Punho fechado: esta linha está silenciada.";
+    controller.hintDisplay.textContent = "Punho fechado: esta roda está silenciada.";
     return;
   }
-
   updateChordFromPointer(controller, controller.smoothedPointer);
 }
 
@@ -434,7 +370,6 @@ function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
   const width = Math.max(1, Math.round(rect.width));
   const height = Math.max(1, Math.round(rect.height));
-
   if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
@@ -444,300 +379,227 @@ function resizeCanvas() {
   }
 }
 
-function getCanvasSize() {
-  return {
-    width: canvas.clientWidth,
-    height: canvas.clientHeight
-  };
-}
+function getCanvasSize() { return { width: canvas.clientWidth, height: canvas.clientHeight }; }
 
-function getKeyLineGeometry(controller) {
+function getWheelGeometry(controller) {
   const { width, height } = getCanvasSize();
   const isNarrow = width < 920;
-  const chordCount = controller.chords.length;
-  const marginX = isNarrow ? Math.max(12, width * 0.025) : Math.max(18, width * 0.02);
-  const centerGap = isNarrow ? Math.max(12, width * 0.025) : Math.max(22, width * 0.02);
-  const bottom = isNarrow ? Math.max(18, height * 0.03) : Math.max(18, height * 0.028);
-  const rowHeight = isNarrow
-    ? Math.max(72, Math.min(102, height * 0.11))
-    : Math.max(82, Math.min(116, height * 0.12));
-  const availableWidth = isNarrow
-    ? Math.max(300, width - marginX * 2)
-    : Math.max(320, (width - marginX * 2 - centerGap) / 2);
-  const gap = isNarrow ? Math.max(4, Math.min(8, availableWidth * 0.005)) : Math.max(4, Math.min(7, availableWidth * 0.004));
-  const segmentWidth = availableWidth / chordCount;
-  const keyWidth = Math.max(22, segmentWidth - gap);
-  const hitPadding = isNarrow ? 110 : 150;
-  const activeZoneTop = isNarrow ? height * 0.46 : height * 0.34;
-  const activeZoneBottom = height - Math.max(6, bottom * 0.25);
-
-  let x;
-  let y;
-
+  const outerRadius = clamp(Math.min(width * (isNarrow ? 0.19 : 0.15), height * 0.26), 110, isNarrow ? 170 : 190);
+  const innerRadius = outerRadius * 0.42;
+  const selectionRadius = (innerRadius + outerRadius) / 2;
+  const segmentAngle = (Math.PI * 2) / controller.chords.length;
+  const startAngle = -Math.PI / 2;
+  const hitPadding = 22;
+  let cx;
+  let cy;
   if (isNarrow) {
-    x = marginX;
-    y = controller.id === "left"
-      ? height - bottom - rowHeight * 2 - 20
-      : height - bottom - rowHeight;
+    cx = width / 2;
+    cy = controller.id === "left" ? height * 0.34 : height * 0.72;
   } else {
-    x = controller.id === "left"
-      ? marginX
-      : width - marginX - availableWidth;
-    y = height - bottom - rowHeight;
+    cx = controller.id === "left" ? width * 0.25 : width * 0.75;
+    cy = height * 0.62;
   }
-
-  return {
-    x,
-    y,
-    width: availableWidth,
-    height: rowHeight,
-    gap,
-    segmentWidth,
-    keyWidth,
-    hitPadding,
-    activeZoneTop,
-    activeZoneBottom,
-    fontSize: isNarrow ? Math.max(16, Math.min(28, keyWidth * 0.42, rowHeight * 0.44)) : Math.max(18, Math.min(32, keyWidth * 0.44, rowHeight * 0.46)),
-    labelY: y - 28
-  };
+  return { cx, cy, outerRadius, innerRadius, selectionRadius, segmentAngle, startAngle, hitPadding, titleY: cy - outerRadius - 22 };
 }
 
-function clearScene() {
-  const { width, height } = getCanvasSize();
-  ctx.clearRect(0, 0, width, height);
-}
+function clearScene() { const { width, height } = getCanvasSize(); ctx.clearRect(0, 0, width, height); }
 
-function drawChordKeys(controller) {
-  const geometry = getKeyLineGeometry(controller);
-  const { x, y, width, height, gap, segmentWidth, keyWidth, fontSize, labelY } = geometry;
-  const label = controller.id === "left" ? "MENORES" : "MAIORES";
-
+function drawChordWheel(controller) {
+  const geometry = getWheelGeometry(controller);
+  const { cx, cy, outerRadius, innerRadius, segmentAngle, startAngle, titleY } = geometry;
   ctx.save();
-
-  ctx.fillStyle = "rgba(5, 8, 15, 0.42)";
-  ctx.strokeStyle = controller.gestureMuted ? "rgba(255, 143, 143, 0.62)" : "rgba(255, 255, 255, 0.18)";
-  ctx.lineWidth = 2;
-  roundRect(ctx, x - 8, y - 52, width + 16, height + 66, 24);
-  ctx.fill();
-  ctx.stroke();
-
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = controller.gestureMuted ? "rgba(255, 180, 180, 0.94)" : "rgba(244, 247, 251, 0.86)";
+  ctx.fillStyle = controller.gestureMuted ? "rgba(40, 12, 18, 0.30)" : "rgba(5, 8, 15, 0.28)";
+  ctx.strokeStyle = controller.gestureMuted ? "rgba(255, 143, 143, 0.72)" : "rgba(255, 255, 255, 0.12)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerRadius + 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = controller.gestureMuted ? "rgba(255, 180, 180, 0.96)" : "rgba(244, 247, 251, 0.92)";
   ctx.font = "900 18px Inter, system-ui, sans-serif";
-  ctx.fillText(label, x + width / 2, labelY);
+  ctx.fillText(controller.wheelTitle, cx, titleY);
 
   for (let index = 0; index < controller.chords.length; index += 1) {
-    const keyX = x + index * segmentWidth + gap / 2;
-    const isActive = index === controller.selectedChordIndex;
-
+    const angleStart = startAngle + index * segmentAngle;
+    const angleEnd = angleStart + segmentAngle;
+    const midAngle = angleStart + segmentAngle / 2;
+    const isActive = index === controller.selectedChordIndex && !controller.gestureMuted;
     ctx.beginPath();
-    roundRect(ctx, keyX, y, keyWidth, height, 14);
-    ctx.fillStyle = isActive && !controller.gestureMuted ? controller.accent : "rgba(255, 255, 255, 0.105)";
-    ctx.strokeStyle = isActive && !controller.gestureMuted ? controller.accentStrong : "rgba(255, 255, 255, 0.18)";
-    ctx.lineWidth = isActive && !controller.gestureMuted ? 3 : 1.5;
+    ctx.arc(cx, cy, outerRadius, angleStart, angleEnd);
+    ctx.arc(cx, cy, innerRadius, angleEnd, angleStart, true);
+    ctx.closePath();
+    ctx.fillStyle = isActive ? controller.accent : "rgba(255, 255, 255, 0.10)";
+    ctx.strokeStyle = isActive ? controller.accentStrong : "rgba(255, 255, 255, 0.18)";
+    ctx.lineWidth = isActive ? 3 : 1.5;
     ctx.fill();
     ctx.stroke();
-
-    if (isActive && !controller.gestureMuted) {
-      ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
-      roundRect(ctx, keyX + 6, y + 7, Math.max(4, keyWidth - 12), Math.max(4, height * 0.16), 999);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = isActive && !controller.gestureMuted ? controller.textOnAccent : "rgba(244, 247, 251, 0.92)";
-    ctx.font = `900 ${fontSize}px Inter, system-ui, sans-serif`;
-    ctx.fillText(controller.chords[index].label, keyX + keyWidth / 2, y + height / 2);
+    const labelRadius = innerRadius + (outerRadius - innerRadius) * 0.56;
+    const tx = cx + Math.cos(midAngle) * labelRadius;
+    const ty = cy + Math.sin(midAngle) * labelRadius;
+    ctx.fillStyle = isActive ? controller.textOnAccent : "rgba(244, 247, 251, 0.95)";
+    ctx.font = `900 ${Math.max(12, Math.min(22, outerRadius * 0.17))}px Inter, system-ui, sans-serif`;
+    ctx.fillText(controller.chords[index].label, tx, ty);
   }
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
+  ctx.fillStyle = controller.gestureMuted ? "rgba(65, 18, 24, 0.86)" : "rgba(6, 10, 18, 0.92)";
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = controller.gestureMuted ? "rgba(255, 143, 143, 0.78)" : "rgba(255, 255, 255, 0.16)";
+  ctx.stroke();
 
   if (controller.gestureMuted) {
-    ctx.fillStyle = "rgba(40, 12, 18, 0.46)";
-    roundRect(ctx, x, y, width, height, 18);
-    ctx.fill();
-
-    ctx.fillStyle = "rgba(255, 210, 210, 0.94)";
+    ctx.fillStyle = "rgba(255, 210, 210, 0.96)";
     ctx.font = "900 18px Inter, system-ui, sans-serif";
-    ctx.fillText("SILENCIADO", x + width / 2, y + height / 2);
+    ctx.fillText("SILENCIADO", cx, cy - 6);
+    ctx.font = "700 12px Inter, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(255, 220, 220, 0.92)";
+    ctx.fillText("Abra a mão para voltar", cx, cy + 16);
+  } else {
+    ctx.fillStyle = "rgba(200, 210, 226, 0.92)";
+    ctx.font = "900 14px Inter, system-ui, sans-serif";
+    ctx.fillText("ZONA NEUTRA", cx, cy - 6);
+    ctx.font = "700 12px Inter, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(174, 184, 202, 0.94)";
+    ctx.fillText("no centro não troca", cx, cy + 16);
   }
-
   ctx.restore();
-}
-
-function roundRect(context, x, y, width, height, radius) {
-  const safeRadius = Math.min(radius, width / 2, height / 2);
-
-  if (typeof context.roundRect === "function") {
-    context.beginPath();
-    context.roundRect(x, y, width, height, safeRadius);
-    return;
-  }
-
-  context.beginPath();
-  context.moveTo(x + safeRadius, y);
-  context.lineTo(x + width - safeRadius, y);
-  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
-  context.lineTo(x + width, y + height - safeRadius);
-  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
-  context.lineTo(x + safeRadius, y + height);
-  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
-  context.lineTo(x, y + safeRadius);
-  context.quadraticCurveTo(x, y, x + safeRadius, y);
 }
 
 function getMirroredPoint(landmark) {
   const { width, height } = getCanvasSize();
-  return {
-    x: (1 - landmark.x) * width,
-    y: landmark.y * height
-  };
+  return { x: (1 - landmark.x) * width, y: landmark.y * height };
 }
 
 function smoothPoint(previous, next, amount) {
   if (!previous) return next;
-
-  return {
-    x: previous.x * amount + next.x * (1 - amount),
-    y: previous.y * amount + next.y * (1 - amount)
-  };
+  return { x: previous.x * amount + next.x * (1 - amount), y: previous.y * amount + next.y * (1 - amount) };
 }
 
 function updateGestureMute(controller, landmarks) {
-  const fistClosed = isFistClosed(landmarks);
-
-  if (fistClosed) {
-    controller.fistFrames += 1;
+  const pose = classifyHandPose(landmarks);
+  controller.poseState = pose;
+  if (pose === "closed") {
+    controller.closedFrames += 1;
     controller.openFrames = 0;
-  } else {
+  } else if (pose === "open") {
     controller.openFrames += 1;
-    controller.fistFrames = 0;
+    controller.closedFrames = 0;
+  } else {
+    controller.closedFrames = Math.max(0, controller.closedFrames - 1);
+    controller.openFrames = Math.max(0, controller.openFrames - 1);
   }
-
-  if (controller.fistFrames >= 4 && !controller.gestureMuted) {
+  if (controller.closedFrames >= 3 && !controller.gestureMuted) {
     controller.gestureMuted = true;
     controller.synth.setGestureMuted(true);
   }
-
-  if (controller.openFrames >= 4 && controller.gestureMuted) {
+  if (controller.openFrames >= 3 && controller.gestureMuted) {
     controller.gestureMuted = false;
     controller.synth.setGestureMuted(false);
   }
 }
 
-function isFistClosed(hand) {
+function classifyHandPose(hand) {
   const palmCenter = averagePoint([hand[0], hand[5], hand[9], hand[13], hand[17]]);
   const wrist = hand[0];
-  const fingers = [
+  const fingerDefs = [
     { tip: hand[8], pip: hand[6], mcp: hand[5] },
     { tip: hand[12], pip: hand[10], mcp: hand[9] },
     { tip: hand[16], pip: hand[14], mcp: hand[13] },
     { tip: hand[20], pip: hand[18], mcp: hand[17] }
   ];
-
-  let extendedFingers = 0;
-  let curledFingers = 0;
-
-  for (const finger of fingers) {
+  let extendedCount = 0;
+  let curledCount = 0;
+  for (const finger of fingerDefs) {
     const tipToPalm = distance3d(finger.tip, palmCenter);
     const pipToPalm = distance3d(finger.pip, palmCenter);
     const mcpToPalm = distance3d(finger.mcp, palmCenter);
     const tipToWrist = distance3d(finger.tip, wrist);
     const pipToWrist = distance3d(finger.pip, wrist);
-
-    const isExtended = tipToPalm > pipToPalm * 1.12 && tipToPalm > mcpToPalm * 1.22;
-    const isCurled = tipToPalm <= pipToPalm * 1.08 || tipToWrist <= pipToWrist * 1.05;
-
-    if (isExtended) extendedFingers += 1;
-    if (isCurled) curledFingers += 1;
+    const extended = tipToPalm > pipToPalm * 1.16 && tipToPalm > mcpToPalm * 1.34 && tipToWrist > pipToWrist * 1.08;
+    const curled = tipToPalm < pipToPalm * 1.04 || tipToWrist < pipToWrist * 1.02;
+    if (extended) extendedCount += 1;
+    if (curled) curledCount += 1;
   }
-
-  return curledFingers >= 3 && extendedFingers <= 1;
+  const thumbTip = hand[4];
+  const thumbIp = hand[3];
+  const thumbMcp = hand[2];
+  const indexMcp = hand[5];
+  const thumbExtended = distance3d(thumbTip, indexMcp) > distance3d(thumbIp, indexMcp) * 1.15 && distance3d(thumbTip, wrist) > distance3d(thumbMcp, wrist) * 1.05;
+  const thumbCurled = distance3d(thumbTip, palmCenter) < distance3d(thumbIp, palmCenter) * 1.05;
+  const openScore = extendedCount + (thumbExtended ? 1 : 0);
+  const closedScore = curledCount + (thumbCurled ? 1 : 0);
+  if (openScore >= 4 && curledCount <= 1) return "open";
+  if (closedScore >= 4 && extendedCount <= 1) return "closed";
+  return "other";
 }
 
 function averagePoint(points) {
-  return points.reduce(
-    (acc, point) => ({
-      x: acc.x + point.x / points.length,
-      y: acc.y + point.y / points.length,
-      z: acc.z + (point.z ?? 0) / points.length
-    }),
-    { x: 0, y: 0, z: 0 }
-  );
+  return points.reduce((acc, point) => ({
+    x: acc.x + point.x / points.length,
+    y: acc.y + point.y / points.length,
+    z: acc.z + (point.z ?? 0) / points.length
+  }), { x: 0, y: 0, z: 0 });
 }
 
-function distance3d(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y, (a.z ?? 0) - (b.z ?? 0));
-}
+function distance3d(a, b) { return Math.hypot(a.x - b.x, a.y - b.y, (a.z ?? 0) - (b.z ?? 0)); }
 
 function updateChordFromPointer(controller, pointer) {
-  const geometry = getKeyLineGeometry(controller);
-  const hitLeft = geometry.x;
-  const hitRight = geometry.x + geometry.width;
-  const hitTop = Math.min(geometry.y - geometry.hitPadding, geometry.activeZoneTop);
-  const hitBottom = Math.max(geometry.y + geometry.height + geometry.hitPadding, geometry.activeZoneBottom);
-
-  if (pointer.x < hitLeft || pointer.x > hitRight || pointer.y < hitTop || pointer.y > hitBottom) {
-    const side = controller.id === "left" ? "esquerda" : "direita";
-    controller.hintDisplay.textContent = `Mova o indicador da ${controller.handLabel.toLowerCase()} para a metade ${side} da tela. A linha horizontal é apenas a referência visual.`;
+  const geometry = getWheelGeometry(controller);
+  const dx = pointer.x - geometry.cx;
+  const dy = pointer.y - geometry.cy;
+  const radius = Math.hypot(dx, dy);
+  if (radius < geometry.innerRadius) {
+    controller.hintDisplay.textContent = "Centro da roda: zona neutra. No meio não há troca de nota.";
     return;
   }
-
-  const relativeX = clamp(pointer.x - geometry.x, 0, geometry.width - 1);
-  const index = clamp(
-    Math.floor(relativeX / geometry.segmentWidth),
-    0,
-    controller.chords.length - 1
-  );
-
+  if (radius > geometry.outerRadius + geometry.hitPadding) {
+    controller.hintDisplay.textContent = `Mova o indicador da ${controller.handLabel.toLowerCase()} para a roda de acordes ${controller.chordGroupLabel}.`;
+    return;
+  }
+  const angle = normalizeAngle(Math.atan2(dy, dx) - geometry.startAngle);
+  const index = clamp(Math.floor(angle / geometry.segmentAngle), 0, controller.chords.length - 1);
   selectChord(controller, index);
 }
 
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
+function normalizeAngle(angle) { const turn = Math.PI * 2; return ((angle % turn) + turn) % turn; }
+function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 
 function selectChord(controller, index) {
   if (index === controller.selectedChordIndex) return;
-
   controller.selectedChordIndex = index;
   const chord = controller.chords[index];
-  const frequencies = getChordFrequencies(chord);
-
-  controller.synth.setChord(frequencies);
+  controller.synth.setChord(getChordFrequencies(chord));
   controller.chordDisplay.textContent = chord.label;
-  controller.hintDisplay.textContent = `Tocando ${chord.label} ${qualityLabel(chord.quality)}. Você pode controlar apontando em uma área maior dessa metade da tela.`;
-
-  controller.listElement.querySelectorAll(".chord-pill").forEach((pill, pillIndex) => {
-    pill.classList.toggle("active", pillIndex === index);
-  });
+  controller.hintDisplay.textContent = `Tocando ${chord.label} ${qualityLabel(chord.quality)}.`;
+  controller.listElement.querySelectorAll(".chord-pill").forEach((pill, pillIndex) => pill.classList.toggle("active", pillIndex === index));
 }
 
 function drawHand(landmarks, controller) {
   const points = landmarks.map(getMirroredPoint);
-
   ctx.save();
   ctx.lineWidth = 3;
   ctx.strokeStyle = controller.skeleton;
   ctx.fillStyle = controller.skeleton;
-
   for (const [start, end] of HAND_CONNECTIONS) {
     ctx.beginPath();
     ctx.moveTo(points[start].x, points[start].y);
     ctx.lineTo(points[end].x, points[end].y);
     ctx.stroke();
   }
-
   for (const point of points) {
     ctx.beginPath();
     ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
     ctx.fill();
   }
-
   ctx.restore();
 }
 
 function drawPointer(point, controller) {
   if (!point) return;
-
   ctx.save();
   ctx.beginPath();
   ctx.arc(point.x, point.y, 13, 0, Math.PI * 2);
@@ -749,14 +611,9 @@ function drawPointer(point, controller) {
   ctx.restore();
 }
 
-function renderChordLists() {
-  renderChordList(controllers.left);
-  renderChordList(controllers.right);
-}
-
+function renderChordLists() { renderChordList(controllers.left); renderChordList(controllers.right); }
 function renderChordList(controller) {
   controller.listElement.innerHTML = "";
-
   controller.chords.forEach((chord) => {
     const pill = document.createElement("span");
     pill.className = `chord-pill ${controller.id}`;
@@ -768,7 +625,6 @@ function renderChordList(controller) {
 function updateStatusFromControllers() {
   const leftSeen = controllers.left.seenThisFrame;
   const rightSeen = controllers.right.seenThisFrame;
-
   if (leftSeen && rightSeen) {
     const mutedParts = [];
     if (controllers.left.gestureMuted) mutedParts.push("esquerda silenciada");
@@ -776,17 +632,8 @@ function updateStatusFromControllers() {
     setStatus(mutedParts.length ? `Duas mãos detectadas · ${mutedParts.join(" · ")}` : "Duas mãos detectadas", "ok");
     return;
   }
-
-  if (leftSeen) {
-    setStatus(controllers.left.gestureMuted ? "Mão esquerda em punho: linha menor silenciada" : "Mão esquerda detectada", "ok");
-    return;
-  }
-
-  if (rightSeen) {
-    setStatus(controllers.right.gestureMuted ? "Mão direita em punho: linha maior silenciada" : "Mão direita detectada", "ok");
-    return;
-  }
-
+  if (leftSeen) { setStatus(controllers.left.gestureMuted ? "Mão esquerda em punho: roda menor silenciada" : "Mão esquerda detectada", "ok"); return; }
+  if (rightSeen) { setStatus(controllers.right.gestureMuted ? "Mão direita em punho: roda maior silenciada" : "Mão direita detectada", "ok"); return; }
   setStatus("Mostre as mãos para a câmera", "");
 }
 
@@ -798,35 +645,18 @@ function setStatus(message, type) {
 
 async function toggleMute() {
   manualMuted = !manualMuted;
-
-  for (const controller of Object.values(controllers)) {
-    controller.synth.setManualMuted(manualMuted);
-  }
-
+  for (const controller of Object.values(controllers)) controller.synth.setManualMuted(manualMuted);
   muteButton.textContent = manualMuted ? "Ativar tudo" : "Silenciar tudo";
 }
 
 function qualityLabel(quality) {
-  const labels = {
-    major: "maior",
-    minor: "menor",
-    diminished: "diminuto",
-    augmented: "aumentado",
-    sus2: "sus2",
-    sus4: "sus4",
-    major7: "maior com sétima maior",
-    minor7: "menor com sétima",
-    dominant7: "com sétima"
-  };
-
+  const labels = { major: "maior", minor: "menor", diminished: "diminuto", augmented: "aumentado", sus2: "sus2", sus4: "sus4", major7: "maior com sétima maior", minor7: "menor com sétima", dominant7: "com sétima" };
   return labels[quality] ?? quality;
 }
-
 
 window.addEventListener("beforeunload", () => {
   cancelAnimationFrame(animationFrameId);
   const stream = video.srcObject;
-  if (stream) {
-    stream.getTracks().forEach((track) => track.stop());
-  }
+  if (stream) stream.getTracks().forEach((track) => track.stop());
+  if (audioContext?.state !== "closed") audioContext?.close();
 });
