@@ -30,6 +30,9 @@ let selectedChordIndex = -1;
 let smoothedPointer = null;
 let isRunning = false;
 let lastResults = null;
+let gestureMuted = false;
+let fistFrames = 0;
+let openFrames = 0;
 
 renderChordList();
 resizeCanvas();
@@ -137,11 +140,18 @@ function predictWebcam() {
     const pointer = getMirroredPoint(primaryHand[8]);
     const smoothAmount = Number(smoothControl.value);
 
+    updateGestureMute(primaryHand);
     smoothedPointer = smoothPoint(smoothedPointer, pointer, smoothAmount);
     drawHands(lastResults.landmarks);
     drawPointer(smoothedPointer);
-    updateChordFromPointer(smoothedPointer);
-    setStatus("Mão detectada", "ok");
+
+    if (gestureMuted) {
+      currentHint.textContent = "Punho fechado: som silenciado. Abra a mão para voltar o som.";
+    } else {
+      updateChordFromPointer(smoothedPointer);
+    }
+
+    setStatus(gestureMuted ? "Punho fechado: silenciado" : "Mão detectada", "ok");
   } else {
     setStatus("Mostre a mão para a câmera", "");
   }
@@ -265,6 +275,73 @@ function choosePrimaryHand(hands) {
     .sort((a, b) => a.score - b.score)[0].hand;
 }
 
+function updateGestureMute(hand) {
+  const fistClosed = isFistClosed(hand);
+
+  if (fistClosed) {
+    fistFrames += 1;
+    openFrames = 0;
+  } else {
+    openFrames += 1;
+    fistFrames = 0;
+  }
+
+  if (fistFrames >= 4 && !gestureMuted) {
+    gestureMuted = true;
+    synth.setGestureMuted(true);
+  }
+
+  if (openFrames >= 4 && gestureMuted) {
+    gestureMuted = false;
+    synth.setGestureMuted(false);
+  }
+}
+
+function isFistClosed(hand) {
+  const palmCenter = averagePoint([hand[0], hand[5], hand[9], hand[13], hand[17]]);
+  const wrist = hand[0];
+  const fingers = [
+    { tip: hand[8], pip: hand[6], mcp: hand[5] },
+    { tip: hand[12], pip: hand[10], mcp: hand[9] },
+    { tip: hand[16], pip: hand[14], mcp: hand[13] },
+    { tip: hand[20], pip: hand[18], mcp: hand[17] }
+  ];
+
+  let extendedFingers = 0;
+  let curledFingers = 0;
+
+  for (const finger of fingers) {
+    const tipToPalm = distance3d(finger.tip, palmCenter);
+    const pipToPalm = distance3d(finger.pip, palmCenter);
+    const mcpToPalm = distance3d(finger.mcp, palmCenter);
+    const tipToWrist = distance3d(finger.tip, wrist);
+    const pipToWrist = distance3d(finger.pip, wrist);
+
+    const isExtended = tipToPalm > pipToPalm * 1.12 && tipToPalm > mcpToPalm * 1.22;
+    const isCurled = tipToPalm <= pipToPalm * 1.08 || tipToWrist <= pipToWrist * 1.05;
+
+    if (isExtended) extendedFingers += 1;
+    if (isCurled) curledFingers += 1;
+  }
+
+  return curledFingers >= 3 && extendedFingers <= 1;
+}
+
+function averagePoint(points) {
+  return points.reduce(
+    (acc, point) => ({
+      x: acc.x + point.x / points.length,
+      y: acc.y + point.y / points.length,
+      z: acc.z + (point.z ?? 0) / points.length
+    }),
+    { x: 0, y: 0, z: 0 }
+  );
+}
+
+function distance3d(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y, (a.z ?? 0) - (b.z ?? 0));
+}
+
 function updateChordFromPointer(pointer) {
   const { centerX, centerY, radius, innerRadius } = getWheelGeometry();
   const dx = pointer.x - centerX;
@@ -355,7 +432,7 @@ function setStatus(message, type) {
 }
 
 async function toggleMute() {
-  const muted = await synth.toggleMute();
+  const muted = await synth.toggleManualMute();
   muteButton.textContent = muted ? "Ativar som" : "Silenciar";
 }
 
@@ -381,7 +458,8 @@ class ChordSynth {
     this.masterGain = null;
     this.filter = null;
     this.voices = [];
-    this.isMuted = false;
+    this.manualMuted = false;
+    this.gestureMuted = false;
     this.currentVolume = 0.18;
   }
 
@@ -456,22 +534,34 @@ class ChordSynth {
 
   setVolume(volume) {
     this.currentVolume = volume;
-    if (!this.masterGain || this.isMuted) return;
-
-    const now = this.audioContext.currentTime;
-    this.masterGain.gain.cancelScheduledValues(now);
-    this.masterGain.gain.setTargetAtTime(volume, now, 0.035);
+    this.updateOutputGain();
   }
 
-  async toggleMute() {
-    if (!this.audioContext || !this.masterGain) return this.isMuted;
+  setGestureMuted(muted) {
+    if (this.gestureMuted === muted) return;
 
-    this.isMuted = !this.isMuted;
+    this.gestureMuted = muted;
+    this.updateOutputGain();
+  }
+
+  async toggleManualMute() {
+    if (!this.audioContext || !this.masterGain) return this.manualMuted;
+
+    this.manualMuted = !this.manualMuted;
+    this.updateOutputGain();
+
+    return this.manualMuted;
+  }
+
+  updateOutputGain() {
+    if (!this.audioContext || !this.masterGain) return;
+
+    const shouldMute = this.manualMuted || this.gestureMuted;
+    const targetVolume = shouldMute ? 0 : this.currentVolume;
     const now = this.audioContext.currentTime;
-    this.masterGain.gain.cancelScheduledValues(now);
-    this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : this.currentVolume, now, 0.035);
 
-    return this.isMuted;
+    this.masterGain.gain.cancelScheduledValues(now);
+    this.masterGain.gain.setTargetAtTime(targetVolume, now, 0.035);
   }
 }
 

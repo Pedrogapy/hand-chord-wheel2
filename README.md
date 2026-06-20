@@ -2,7 +2,7 @@
 
 Site estático que usa rastreamento de pontos da mão com MediaPipe e gera um som contínuo de acorde com a Web Audio API.
 
-A ideia é simples: existe uma roda com acordes. O indicador da mão escolhe o setor da roda. Quando a mão se move para outro acorde, o som troca para o acorde equivalente.
+A ideia é simples: existe uma roda com acordes. O indicador da mão escolhe o setor da roda. Quando a mão se move para outro acorde, o som troca para o acorde equivalente. Ao fechar a mão em punho, o som é silenciado. Ao abrir a mão, o som volta.
 
 ## Funcionalidades
 
@@ -13,6 +13,8 @@ A ideia é simples: existe uma roda com acordes. O indicador da mão escolhe o s
 - Troca suave entre acordes.
 - Controle de volume.
 - Controle de suavização para reduzir tremedeira na seleção.
+- Silenciamento automático ao fechar a mão em punho.
+- Reativação automática ao abrir a mão.
 - Pronto para GitHub Pages.
 
 ## Como rodar localmente
