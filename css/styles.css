@@ -47,10 +47,10 @@ button:disabled {
 }
 
 .app-shell {
-  width: min(1600px, calc(100% - 24px));
+  width: min(1800px, calc(100% - 10px));
   min-height: 100vh;
   margin: 0 auto;
-  padding: 14px 0 24px;
+  padding: 10px 0 20px;
 }
 
 .topbar {
@@ -58,7 +58,7 @@ button:disabled {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
   align-items: end;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .title-block {
@@ -135,7 +135,7 @@ h1 {
   position: relative;
   overflow: hidden;
   width: 100%;
-  height: clamp(620px, calc(100vh - 150px), 920px);
+  height: clamp(720px, calc(100vh - 110px), 980px);
   border-radius: 22px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent),
@@ -186,7 +186,7 @@ canvas {
   position: absolute;
   top: 16px;
   right: 16px;
-  width: min(380px, calc(100% - 32px));
+  width: min(430px, calc(100% - 32px));
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -221,7 +221,7 @@ canvas {
 .current-chord strong {
   display: block;
   margin-top: 4px;
-  font-size: clamp(2rem, 3vw, 3.3rem);
+  font-size: clamp(2.4rem, 4vw, 4.2rem);
   line-height: 1;
   letter-spacing: -0.08em;
 }
@@ -231,13 +231,13 @@ canvas {
   margin-top: 7px;
   color: var(--muted);
   line-height: 1.35;
-  font-size: 0.78rem;
+  font-size: 0.84rem;
 }
 
 .bottom-panel {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: 220px 260px minmax(240px, 1fr) minmax(360px, 1.35fr);
+  grid-template-columns: 230px 260px minmax(280px, 1fr) minmax(380px, 1.35fr);
   gap: 12px;
   align-items: start;
 }
@@ -404,5 +404,12 @@ input[type="range"] {
 
   .stage {
     height: 560px;
+  }
+}
+
+
+@media (max-width: 1024px) {
+  .stage {
+    height: clamp(660px, calc(100vh - 90px), 900px);
   }
 }

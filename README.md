@@ -143,3 +143,8 @@ hand-chord-wheel/
 ├── LICENSE
 └── .gitignore
 ```
+
+
+## Ajuste recente
+
+As linhas horizontais foram aumentadas e a área de controle de cada mão ficou muito maior. Agora você não precisa acertar exatamente em cima da linha para trocar o acorde: basta apontar dentro da metade correspondente da tela.

@@ -453,19 +453,23 @@ function getCanvasSize() {
 
 function getKeyLineGeometry(controller) {
   const { width, height } = getCanvasSize();
-  const isNarrow = width < 760;
+  const isNarrow = width < 920;
   const chordCount = controller.chords.length;
-  const marginX = isNarrow ? width * 0.035 : Math.max(22, width * 0.028);
-  const centerGap = isNarrow ? Math.max(14, width * 0.04) : Math.max(34, width * 0.035);
-  const bottom = isNarrow ? Math.max(34, height * 0.07) : Math.max(44, height * 0.07);
-  const rowHeight = isNarrow ? Math.max(46, height * 0.075) : Math.max(58, Math.min(82, height * 0.085));
+  const marginX = isNarrow ? Math.max(12, width * 0.025) : Math.max(18, width * 0.02);
+  const centerGap = isNarrow ? Math.max(12, width * 0.025) : Math.max(22, width * 0.02);
+  const bottom = isNarrow ? Math.max(18, height * 0.03) : Math.max(18, height * 0.028);
+  const rowHeight = isNarrow
+    ? Math.max(72, Math.min(102, height * 0.11))
+    : Math.max(82, Math.min(116, height * 0.12));
   const availableWidth = isNarrow
-    ? Math.max(280, width - marginX * 2)
-    : Math.max(260, (width - marginX * 2 - centerGap) / 2);
-  const gap = Math.max(4, Math.min(8, availableWidth * 0.006));
+    ? Math.max(300, width - marginX * 2)
+    : Math.max(320, (width - marginX * 2 - centerGap) / 2);
+  const gap = isNarrow ? Math.max(4, Math.min(8, availableWidth * 0.005)) : Math.max(4, Math.min(7, availableWidth * 0.004));
   const segmentWidth = availableWidth / chordCount;
-  const keyWidth = Math.max(18, segmentWidth - gap);
-  const hitPadding = isNarrow ? 32 : 46;
+  const keyWidth = Math.max(22, segmentWidth - gap);
+  const hitPadding = isNarrow ? 110 : 150;
+  const activeZoneTop = isNarrow ? height * 0.46 : height * 0.34;
+  const activeZoneBottom = height - Math.max(6, bottom * 0.25);
 
   let x;
   let y;
@@ -473,7 +477,7 @@ function getKeyLineGeometry(controller) {
   if (isNarrow) {
     x = marginX;
     y = controller.id === "left"
-      ? height - bottom - rowHeight * 2 - 18
+      ? height - bottom - rowHeight * 2 - 20
       : height - bottom - rowHeight;
   } else {
     x = controller.id === "left"
@@ -490,7 +494,11 @@ function getKeyLineGeometry(controller) {
     gap,
     segmentWidth,
     keyWidth,
-    hitPadding
+    hitPadding,
+    activeZoneTop,
+    activeZoneBottom,
+    fontSize: isNarrow ? Math.max(16, Math.min(28, keyWidth * 0.42, rowHeight * 0.44)) : Math.max(18, Math.min(32, keyWidth * 0.44, rowHeight * 0.46)),
+    labelY: y - 28
   };
 }
 
@@ -501,7 +509,7 @@ function clearScene() {
 
 function drawChordKeys(controller) {
   const geometry = getKeyLineGeometry(controller);
-  const { x, y, width, height, gap, segmentWidth, keyWidth } = geometry;
+  const { x, y, width, height, gap, segmentWidth, keyWidth, fontSize, labelY } = geometry;
   const label = controller.id === "left" ? "MENORES" : "MAIORES";
 
   ctx.save();
@@ -509,15 +517,15 @@ function drawChordKeys(controller) {
   ctx.fillStyle = "rgba(5, 8, 15, 0.42)";
   ctx.strokeStyle = controller.gestureMuted ? "rgba(255, 143, 143, 0.62)" : "rgba(255, 255, 255, 0.18)";
   ctx.lineWidth = 2;
-  roundRect(ctx, x - 8, y - 42, width + 16, height + 54, 22);
+  roundRect(ctx, x - 8, y - 52, width + 16, height + 66, 24);
   ctx.fill();
   ctx.stroke();
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = controller.gestureMuted ? "rgba(255, 180, 180, 0.94)" : "rgba(244, 247, 251, 0.86)";
-  ctx.font = "900 15px Inter, system-ui, sans-serif";
-  ctx.fillText(label, x + width / 2, y - 20);
+  ctx.font = "900 18px Inter, system-ui, sans-serif";
+  ctx.fillText(label, x + width / 2, labelY);
 
   for (let index = 0; index < controller.chords.length; index += 1) {
     const keyX = x + index * segmentWidth + gap / 2;
@@ -538,7 +546,7 @@ function drawChordKeys(controller) {
     }
 
     ctx.fillStyle = isActive && !controller.gestureMuted ? controller.textOnAccent : "rgba(244, 247, 251, 0.92)";
-    ctx.font = `900 ${Math.max(10, Math.min(22, keyWidth * 0.34, height * 0.42))}px Inter, system-ui, sans-serif`;
+    ctx.font = `900 ${fontSize}px Inter, system-ui, sans-serif`;
     ctx.fillText(controller.chords[index].label, keyX + keyWidth / 2, y + height / 2);
   }
 
@@ -664,12 +672,12 @@ function updateChordFromPointer(controller, pointer) {
   const geometry = getKeyLineGeometry(controller);
   const hitLeft = geometry.x;
   const hitRight = geometry.x + geometry.width;
-  const hitTop = geometry.y - geometry.hitPadding;
-  const hitBottom = geometry.y + geometry.height + geometry.hitPadding;
+  const hitTop = Math.min(geometry.y - geometry.hitPadding, geometry.activeZoneTop);
+  const hitBottom = Math.max(geometry.y + geometry.height + geometry.hitPadding, geometry.activeZoneBottom);
 
   if (pointer.x < hitLeft || pointer.x > hitRight || pointer.y < hitTop || pointer.y > hitBottom) {
     const side = controller.id === "left" ? "esquerda" : "direita";
-    controller.hintDisplay.textContent = `Mova o indicador da ${controller.handLabel.toLowerCase()} para a linha horizontal da ${side}.`;
+    controller.hintDisplay.textContent = `Mova o indicador da ${controller.handLabel.toLowerCase()} para a metade ${side} da tela. A linha horizontal é apenas a referência visual.`;
     return;
   }
 
@@ -696,7 +704,7 @@ function selectChord(controller, index) {
 
   controller.synth.setChord(frequencies);
   controller.chordDisplay.textContent = chord.label;
-  controller.hintDisplay.textContent = `Tocando ${chord.label} ${qualityLabel(chord.quality)}.`;
+  controller.hintDisplay.textContent = `Tocando ${chord.label} ${qualityLabel(chord.quality)}. Você pode controlar apontando em uma área maior dessa metade da tela.`;
 
   controller.listElement.querySelectorAll(".chord-pill").forEach((pill, pillIndex) => {
     pill.classList.toggle("active", pillIndex === index);
