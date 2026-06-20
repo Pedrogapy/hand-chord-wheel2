@@ -31,8 +31,6 @@ let smoothedPointer = null;
 let isRunning = false;
 let lastResults = null;
 
-const synth = new ChordSynth();
-
 renderChordList();
 resizeCanvas();
 window.addEventListener("resize", resizeCanvas);
@@ -476,6 +474,8 @@ class ChordSynth {
     return this.isMuted;
   }
 }
+
+const synth = new ChordSynth();
 
 window.addEventListener("beforeunload", () => {
   cancelAnimationFrame(animationFrameId);
