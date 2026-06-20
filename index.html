@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hand Chord Wheel</title>
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">MediaPipe + Web Audio API</p>
+          <h1>Roda de acordes controlada pela mão</h1>
+          <p class="subtitle">
+            Aponte o indicador para um setor da roda. O acorde fica soando de forma contínua e troca automaticamente quando a mão muda de posição.
+          </p>
+        </div>
+
+        <div class="hero-actions">
+          <button id="startButton" class="primary-button">Iniciar câmera e áudio</button>
+          <button id="muteButton" class="secondary-button" disabled>Silenciar</button>
+        </div>
+      </section>
+
+      <section class="layout-grid">
+        <article class="camera-card">
+          <div class="stage" id="stage">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="overlay"></canvas>
+            <div class="stage-badge" id="trackingStatus">Aguardando início</div>
+          </div>
+        </article>
+
+        <aside class="panel">
+          <div class="current-chord">
+            <span class="label">Acorde atual</span>
+            <strong id="currentChord">--</strong>
+            <small id="currentHint">Inicie e posicione a mão dentro da roda.</small>
+          </div>
+
+          <div class="control-group">
+            <label for="volumeControl">Volume</label>
+            <input id="volumeControl" type="range" min="0" max="0.6" step="0.01" value="0.18" />
+          </div>
+
+          <div class="control-group">
+            <label for="smoothControl">Suavização da troca</label>
+            <input id="smoothControl" type="range" min="0" max="0.92" step="0.02" value="0.58" />
+            <span class="help-text">Mais alto = menos tremedeira na seleção.</span>
+          </div>
+
+          <div class="instructions">
+            <h2>Como usar</h2>
+            <ol>
+              <li>Clique em <strong>Iniciar câmera e áudio</strong>.</li>
+              <li>Permita o acesso à webcam.</li>
+              <li>Deixe a mão visível.</li>
+              <li>Aponte o indicador para o acorde desejado na roda.</li>
+            </ol>
+          </div>
+
+          <div class="chord-list" id="chordList" aria-label="Lista de acordes da roda"></div>
+        </aside>
+      </section>
+    </main>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>

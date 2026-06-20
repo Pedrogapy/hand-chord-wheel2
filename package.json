@@ -1,0 +1,13 @@
+{
+  "name": "hand-chord-wheel",
+  "version": "1.0.0",
+  "description": "Site estático com MediaPipe HandLandmarker e Web Audio API para trocar acordes usando rastreamento da mão.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "devDependencies": {
+    "vite": "latest"
+  }
+}
