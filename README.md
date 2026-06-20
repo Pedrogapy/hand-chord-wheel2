@@ -1,20 +1,27 @@
 # Hand Chord Wheel
 
-Site estático que usa rastreamento de pontos da mão com MediaPipe e gera um som contínuo de acorde com a Web Audio API.
+Site estático que usa rastreamento de pontos das mãos com MediaPipe e gera sons contínuos de acordes com a Web Audio API.
 
-A ideia é simples: existe uma roda com acordes. O indicador da mão escolhe o setor da roda. Quando a mão se move para outro acorde, o som troca para o acorde equivalente. Ao fechar a mão em punho, o som é silenciado. Ao abrir a mão, o som volta.
+Agora existem duas rodas ao mesmo tempo:
+
+- **Mão esquerda:** controla a roda de acordes menores.
+- **Mão direita:** controla a roda de acordes maiores.
+- As duas rodas podem tocar simultaneamente.
+- Fechar uma mão em punho silencia apenas a roda daquela mão.
+- Abrir a mão novamente desilencia apenas aquela roda.
 
 ## Funcionalidades
 
-- Rastreamento da mão pela webcam.
+- Rastreamento de até duas mãos pela webcam.
 - Uso do ponto do indicador para selecionar acordes.
-- Roda visual com 12 acordes.
+- Roda esquerda com acordes menores, incluindo `Am`, `Em` e `Fm`.
+- Roda direita com acordes maiores, mantendo a lógica original.
 - Som contínuo sintetizado no navegador, sem arquivos `.mp3`.
-- Troca suave entre acordes.
-- Controle de volume.
+- Duas fontes sonoras independentes, uma para cada roda.
+- Controle de volume geral.
 - Controle de suavização para reduzir tremedeira na seleção.
-- Silenciamento automático ao fechar a mão em punho.
-- Reativação automática ao abrir a mão.
+- Opção para inverter esquerda/direita caso a câmera reconheça as mãos ao contrário.
+- Layout com câmera ocupando quase todo o site.
 - Pronto para GitHub Pages.
 
 ## Como rodar localmente
@@ -46,16 +53,34 @@ Depois abra:
 http://localhost:5173
 ```
 
+## Como atualizar no GitHub
+
+Substitua os arquivos do repositório por esta versão e rode:
+
+```bash
+git add .
+git commit -m "Adicionar duas rodas de acordes por mão"
+git push
+```
+
+Se você ainda tiver a pasta `.github` antiga no seu repositório e estiver publicando pelo modo simples do GitHub Pages, pode remover com:
+
+```bash
+git rm -r .github
+git commit -m "Remover workflow antigo do GitHub Pages"
+git push
+```
+
 ## Como publicar no GitHub Pages
 
-1. Crie um repositório no GitHub.
-2. Envie todos os arquivos deste projeto.
-3. No GitHub, entre em **Settings > Pages**.
-4. Em **Build and deployment**, escolha **GitHub Actions**.
-5. Faça um push na branch `main`.
-6. O workflow incluído vai publicar o site automaticamente.
+Como o projeto é estático, o modo mais simples é:
 
-Também dá para publicar pelo modo simples do Pages usando a branch `main` e a pasta `/root`, porque o projeto é estático.
+1. Entre no repositório no GitHub.
+2. Vá em **Settings > Pages**.
+3. Em **Build and deployment**, escolha **Deploy from a branch**.
+4. Em **Branch**, escolha `main`.
+5. Em **Folder**, escolha `/root`.
+6. Salve.
 
 ## Como trocar os acordes
 
@@ -65,12 +90,21 @@ Edite o arquivo:
 js/chords.js
 ```
 
-A lista principal fica em `CHORDS`:
+A roda da direita usa:
 
 ```js
-export const CHORDS = [
+export const MAJOR_CHORDS = [
   { label: "C", root: "C", quality: "major" },
   { label: "G", root: "G", quality: "major" }
+];
+```
+
+A roda da esquerda usa:
+
+```js
+export const MINOR_CHORDS = [
+  { label: "Am", root: "A", quality: "minor" },
+  { label: "Em", root: "E", quality: "minor" }
 ];
 ```
 
@@ -91,6 +125,7 @@ Qualidades aceitas:
 - A webcam só funciona em `localhost` ou em site com HTTPS. GitHub Pages funciona porque usa HTTPS.
 - O áudio precisa de clique do usuário para iniciar. Isso é regra dos navegadores modernos.
 - O vídeo é espelhado para ficar natural como webcam frontal.
+- Se mão esquerda/direita ficarem invertidas, marque a opção **Inverter mãos** no painel inferior.
 - O projeto usa o modelo `hand_landmarker.task` hospedado pelo Google. Então precisa de internet para carregar o MediaPipe e o modelo.
 
 ## Estrutura
@@ -106,7 +141,5 @@ hand-chord-wheel/
 ├── package.json
 ├── README.md
 ├── LICENSE
-└── .github/
-    └── workflows/
-        └── deploy-pages.yml
+└── .gitignore
 ```

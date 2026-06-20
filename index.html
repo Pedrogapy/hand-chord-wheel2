@@ -8,61 +8,82 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="hero">
-        <div>
+      <header class="topbar">
+        <div class="title-block">
           <p class="eyebrow">MediaPipe + Web Audio API</p>
-          <h1>Roda de acordes controlada pela mão</h1>
+          <h1>Rodas de acordes controladas pelas mãos</h1>
           <p class="subtitle">
-            Aponte o indicador para um setor da roda. O acorde fica soando de forma contínua, troca automaticamente quando a mão muda de posição e silencia quando você fecha a mão em punho.
+            Mão esquerda controla acordes menores. Mão direita controla acordes maiores. As duas rodas podem tocar ao mesmo tempo.
           </p>
         </div>
 
         <div class="hero-actions">
           <button id="startButton" class="primary-button">Iniciar câmera e áudio</button>
-          <button id="muteButton" class="secondary-button" disabled>Silenciar</button>
+          <button id="muteButton" class="secondary-button" disabled>Silenciar tudo</button>
+        </div>
+      </header>
+
+      <section class="camera-card">
+        <div class="stage" id="stage">
+          <video id="webcam" autoplay playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div class="stage-badge" id="trackingStatus">Aguardando início</div>
+
+          <div class="hud-panel" aria-label="Estado das rodas">
+            <div class="current-chord minor-card">
+              <span class="label">Esquerda · menores</span>
+              <strong id="leftChord">--</strong>
+              <small id="leftHint">Abra a mão esquerda e aponte para a roda da esquerda.</small>
+            </div>
+
+            <div class="current-chord major-card">
+              <span class="label">Direita · maiores</span>
+              <strong id="rightChord">--</strong>
+              <small id="rightHint">Abra a mão direita e aponte para a roda da direita.</small>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="layout-grid">
-        <article class="camera-card">
-          <div class="stage" id="stage">
-            <video id="webcam" autoplay playsinline muted></video>
-            <canvas id="overlay"></canvas>
-            <div class="stage-badge" id="trackingStatus">Aguardando início</div>
-          </div>
-        </article>
+      <section class="bottom-panel">
+        <div class="control-group">
+          <label for="volumeControl">Volume geral</label>
+          <input id="volumeControl" type="range" min="0" max="0.6" step="0.01" value="0.16" />
+        </div>
 
-        <aside class="panel">
-          <div class="current-chord">
-            <span class="label">Acorde atual</span>
-            <strong id="currentChord">--</strong>
-            <small id="currentHint">Inicie e posicione a mão dentro da roda.</small>
-          </div>
+        <div class="control-group">
+          <label for="smoothControl">Suavização da troca</label>
+          <input id="smoothControl" type="range" min="0" max="0.92" step="0.02" value="0.58" />
+          <span class="help-text">Mais alto = menos tremedeira na seleção.</span>
+        </div>
 
-          <div class="control-group">
-            <label for="volumeControl">Volume</label>
-            <input id="volumeControl" type="range" min="0" max="0.6" step="0.01" value="0.18" />
-          </div>
+        <label class="toggle-row" for="swapHands">
+          <input id="swapHands" type="checkbox" />
+          <span>Inverter mãos se a câmera reconhecer esquerda/direita ao contrário</span>
+        </label>
 
-          <div class="control-group">
-            <label for="smoothControl">Suavização da troca</label>
-            <input id="smoothControl" type="range" min="0" max="0.92" step="0.02" value="0.58" />
-            <span class="help-text">Mais alto = menos tremedeira na seleção.</span>
-          </div>
+        <div class="instructions">
+          <h2>Como usar</h2>
+          <ol>
+            <li>Clique em <strong>Iniciar câmera e áudio</strong>.</li>
+            <li>Permita o acesso à webcam.</li>
+            <li>Mão direita aberta toca a roda de acordes maiores.</li>
+            <li>Mão esquerda aberta toca a roda de acordes menores.</li>
+            <li>Fechar uma mão em punho silencia apenas a roda daquela mão.</li>
+            <li>Abrir a mão novamente desilencia aquela roda.</li>
+          </ol>
+        </div>
 
-          <div class="instructions">
-            <h2>Como usar</h2>
-            <ol>
-              <li>Clique em <strong>Iniciar câmera e áudio</strong>.</li>
-              <li>Permita o acesso à webcam.</li>
-              <li>Deixe a mão visível.</li>
-              <li>Aponte o indicador para o acorde desejado na roda.</li>
-              <li>Feche a mão em punho para silenciar. Abra a mão para voltar o som.</li>
-            </ol>
+        <div class="chord-bank">
+          <div>
+            <h2>Roda esquerda · menores</h2>
+            <div class="chord-list" id="minorChordList" aria-label="Lista de acordes menores"></div>
           </div>
-
-          <div class="chord-list" id="chordList" aria-label="Lista de acordes da roda"></div>
-        </aside>
+          <div>
+            <h2>Roda direita · maiores</h2>
+            <div class="chord-list" id="majorChordList" aria-label="Lista de acordes maiores"></div>
+          </div>
+        </div>
       </section>
     </main>
 

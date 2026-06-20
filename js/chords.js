@@ -1,4 +1,4 @@
-export const CHORDS = [
+export const MAJOR_CHORDS = [
   { label: "C", root: "C", quality: "major" },
   { label: "G", root: "G", quality: "major" },
   { label: "D", root: "D", quality: "major" },
@@ -12,6 +12,23 @@ export const CHORDS = [
   { label: "Bb", root: "Bb", quality: "major" },
   { label: "F", root: "F", quality: "major" }
 ];
+
+export const MINOR_CHORDS = [
+  { label: "Am", root: "A", quality: "minor" },
+  { label: "Em", root: "E", quality: "minor" },
+  { label: "Bm", root: "B", quality: "minor" },
+  { label: "F#m", root: "F#", quality: "minor" },
+  { label: "C#m", root: "C#", quality: "minor" },
+  { label: "G#m", root: "G#", quality: "minor" },
+  { label: "Ebm", root: "Eb", quality: "minor" },
+  { label: "Bbm", root: "Bb", quality: "minor" },
+  { label: "Fm", root: "F", quality: "minor" },
+  { label: "Cm", root: "C", quality: "minor" },
+  { label: "Gm", root: "G", quality: "minor" },
+  { label: "Dm", root: "D", quality: "minor" }
+];
+
+export const CHORDS = MAJOR_CHORDS;
 
 const ROOT_TO_MIDI = {
   C: 48,
